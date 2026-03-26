@@ -42,62 +42,7 @@ import {
 import { cn } from './lib/utils';
 import Markdown from 'react-markdown';
 import { generateNarrative } from './services/aiService';
-
-// Mock Data
-const MOCK_DATA = {
-  summary: [
-    { label: "Total Penduduk", value: 134293, icon: Users, color: "bg-blue-500" },
-    { label: "Laki-laki", value: 67314, icon: UserCheck, color: "bg-indigo-500" },
-    { label: "Perempuan", value: 66979, icon: UserCheck, color: "bg-pink-500" },
-    { label: "Kepala Keluarga", value: 38439, icon: Home, color: "bg-emerald-500" },
-    { label: "Usia Produktif", value: 87481, icon: TrendingUp, color: "bg-amber-500" },
-  ],
-  kecamatan: [
-    { name: "Tanimbar Selatan", value: 40253, density: 49, in: 46, out: 72 },
-    { name: "Selaru", value: 15853, density: 19, in: 24, out: 53 },
-    { name: "Tanimbar Utara", value: 15257, density: 18, in: 28, out: 51 },
-    { name: "Wermaktian", value: 14524, density: 5, in: 21, out: 41 },
-    { name: "Wertamrian", value: 12478, density: 10, in: 36, out: 74 },
-    { name: "Wuarlabobar", value: 9572, density: 16, in: 41, out: 62 },
-    { name: "Nirunmas", value: 8922, density: 9, in: 27, out: 39 },
-    { name: "Kormomolin", value: 8073, density: 9, in: 27, out: 59 },
-    { name: "Fordata", value: 5142, density: 65, in: 28, out: 85 },
-    { name: "Molu Maru", value: 4219, density: 66, in: 15, out: 37 }
-  ],
-  pendidikan: [
-    { name: "Tidak Sekolah", value: 21753 },
-    { name: "SD", value: 23032 },
-    { name: "SLTP", value: 21171 },
-    { name: "SLTA", value: 39396 },
-    { name: "Diploma", value: 2165 },
-    { name: "S1", value: 7254 },
-    { name: "S2/S3", value: 256 },
-  ],
-  pekerjaan: [
-    { name: "Pelajar", value: 39887 },
-    { name: "Tidak Bekerja", value: 36787 },
-    { name: "Petani", value: 29925 },
-    { name: "URT", value: 9324 },
-    { name: "Nelayan", value: 3087 },
-    { name: "Wiraswasta", value: 3887 },
-    { name: "PNS", value: 2587 },
-    { name: "Lainnya", value: 8816 },
-  ],
-  agama: [
-    { name: "Kristen", value: 82331 },
-    { name: "Katolik", value: 44220 },
-    { name: "Islam", value: 7683 },
-    { name: "Lainnya", value: 59 },
-  ],
-  dokumen: [
-    { name: "KK", value: 95.10 },
-    { name: "KTP-El", value: 92.96 },
-    { name: "KIA", value: 23.51 },
-    { name: "Akta 0-17", value: 98.84 },
-    { name: "Akta 0-5", value: 97.38 },
-    { name: "Akta Nikah", value: 71.40 },
-  ]
-};
+import { fetchDashboardData, FALLBACK_DATA } from './services/dataService';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#06b6d4', '#ef4444', '#ec4899', '#64748b'];
 
@@ -165,6 +110,15 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [narrative, setNarrative] = useState('');
   const [isNarrativeLoading, setIsNarrativeLoading] = useState(false);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData().then(data => {
+      setDashboardData(data);
+      setIsDataLoading(false);
+    });
+  }, []);
 
   const navItems = [
     { id: 'overview', label: 'Ringkasan', icon: LayoutDashboard },
@@ -174,16 +128,17 @@ export default function App() {
     { id: 'documents', label: 'Dokumen', icon: FileText },
   ];
 
-  const fetchNarrative = useCallback(async (tab: string) => {
+  const fetchNarrative = useCallback(async (tab: string, data: any) => {
+    if (!data) return;
     setIsNarrativeLoading(true);
     let sectionData = {};
     
     switch(tab) {
-      case 'overview': sectionData = { summary: MOCK_DATA.summary, kecamatan: MOCK_DATA.kecamatan }; break;
-      case 'population': sectionData = { kecamatan: MOCK_DATA.kecamatan }; break;
-      case 'social': sectionData = { pendidikan: MOCK_DATA.pendidikan, pekerjaan: MOCK_DATA.pekerjaan }; break;
-      case 'vital': sectionData = { vital: MOCK_DATA.kecamatan.map(k => ({ name: k.name, in: k.in, out: k.out })) }; break;
-      case 'documents': sectionData = { dokumen: MOCK_DATA.dokumen }; break;
+      case 'overview': sectionData = { summary: data.summary, kecamatan: data.kecamatan }; break;
+      case 'population': sectionData = { kecamatan: data.kecamatan }; break;
+      case 'social': sectionData = { pendidikan: data.pendidikan, pekerjaan: data.pekerjaan }; break;
+      case 'vital': sectionData = { vital: data.kecamatan.map((k: any) => ({ name: k.name, in: k.in, out: k.out })) }; break;
+      case 'documents': sectionData = { dokumen: data.dokumen }; break;
     }
 
     const result = await generateNarrative(tab, sectionData);
@@ -192,8 +147,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetchNarrative(activeTab);
-  }, [activeTab, fetchNarrative]);
+    if (dashboardData) {
+      fetchNarrative(activeTab, dashboardData);
+    }
+  }, [activeTab, dashboardData, fetchNarrative]);
+
+  if (isDataLoading || !dashboardData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+          <p className="text-slate-500 font-medium">Memuat Data Demografi...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
@@ -376,7 +344,7 @@ export default function App() {
 
                   {/* Stats Grid - Only on Overview */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-                    {MOCK_DATA.summary.map((stat, idx) => (
+                    {dashboardData.summary.map((stat: any, idx: number) => (
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -403,7 +371,7 @@ export default function App() {
                     </div>
                     <div className="h-[350px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={MOCK_DATA.kecamatan}>
+                        <BarChart data={dashboardData.kecamatan}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                           <XAxis 
                             dataKey="name" 
@@ -477,7 +445,7 @@ export default function App() {
                     <h3 className="font-bold text-slate-900 mb-6">Kepadatan per Kecamatan</h3>
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={MOCK_DATA.kecamatan} layout="vertical">
+                        <BarChart data={dashboardData.kecamatan} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                           <XAxis type="number" hide />
                           <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={100} />
@@ -525,7 +493,7 @@ export default function App() {
                     </h3>
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={MOCK_DATA.pendidikan} layout="vertical">
+                        <BarChart data={dashboardData.pendidikan} layout="vertical">
                           <XAxis type="number" hide />
                           <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={100} />
                           <Tooltip />
@@ -543,7 +511,7 @@ export default function App() {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={MOCK_DATA.pekerjaan}
+                            data={dashboardData.pekerjaan}
                             cx="50%"
                             cy="50%"
                             outerRadius={100}
@@ -551,7 +519,7 @@ export default function App() {
                             dataKey="value"
                             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                           >
-                            {MOCK_DATA.pekerjaan.map((entry, index) => (
+                            {dashboardData.pekerjaan.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
@@ -568,7 +536,7 @@ export default function App() {
                   <h3 className="font-bold text-slate-900 mb-6">Dinamika Migrasi per Kecamatan</h3>
                   <div className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={MOCK_DATA.kecamatan}>
+                      <LineChart data={dashboardData.kecamatan}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
@@ -586,13 +554,13 @@ export default function App() {
                   <h3 className="font-bold text-slate-900 mb-6">Cakupan Kepemilikan Dokumen (%)</h3>
                   <div className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={MOCK_DATA.dokumen}>
+                      <BarChart data={dashboardData.dokumen}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} domain={[0, 100]} />
                         <Tooltip />
                         <Bar dataKey="value" fill="#f59e0b" radius={[6, 6, 0, 0]} barSize={40}>
-                          {MOCK_DATA.dokumen.map((entry, index) => (
+                          {dashboardData.dokumen.map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={entry.value > 90 ? '#10b981' : entry.value > 50 ? '#f59e0b' : '#ef4444'} />
                           ))}
                         </Bar>
