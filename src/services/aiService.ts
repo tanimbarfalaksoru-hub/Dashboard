@@ -1,8 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const apiKey = process.env.GEMINI_API_KEY || "";
+const ai = new GoogleGenAI({ apiKey });
 
 export async function generateNarrative(section: string, data: any) {
+  if (!apiKey) {
+    console.error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
+    return "⚠️ **Konfigurasi API Key Hilang**\n\nSistem tidak dapat menghasilkan analisis karena `GEMINI_API_KEY` belum dikonfigurasi di server (Cloudflare). Silakan tambahkan API Key pada pengaturan Environment Variables di Cloudflare Pages Anda dan lakukan deploy ulang.";
+  }
+
   try {
     const prompt = `
       Anda adalah seorang ahli demografi senior dan analis data strategis profesional. 
