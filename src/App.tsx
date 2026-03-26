@@ -610,7 +610,7 @@ export default function App() {
         {/* Footer */}
         <footer className="mt-auto p-6 border-t border-slate-200 bg-white text-center">
           <p className="text-sm text-slate-500">
-            &copy; Pemerintah Kabupaten Kepulauan Tanimbar. Dikembangkan dengan <span className="text-pink-500">❤️</span> untuk transparansi data.
+            @Dukcapil Kabupaten Kepulauan Tanimbar-Bidang PIAK dan Pemanfaatan Data
           </p>
         </footer>
       </main>
