@@ -75,19 +75,29 @@ const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL || "";
 export async function fetchDashboardData() {
   if (!APPS_SCRIPT_URL) {
     console.log("Menggunakan data lokal (Apps Script URL belum diatur)");
-    return mapIcons(FALLBACK_DATA);
+    return { ...mapIcons(FALLBACK_DATA), isLive: false, error: "URL belum diatur" };
   }
 
   try {
-    const response = await fetch(APPS_SCRIPT_URL);
-    if (!response.ok) throw new Error("Gagal mengambil data dari Apps Script");
+    // Tambahkan timestamp untuk mencegah caching dari browser atau Cloudflare
+    const urlWithCacheBuster = `${APPS_SCRIPT_URL}${APPS_SCRIPT_URL.includes('?') ? '&' : '?'}t=${new Date().getTime()}`;
+    
+    const response = await fetch(urlWithCacheBuster, {
+      method: 'GET',
+      cache: 'no-store', // Paksa browser untuk tidak menggunakan cache
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const data = await response.json();
-    return mapIcons(data);
-  } catch (error) {
-    console.error("Error fetching data:", error);
+    return { ...mapIcons(data), isLive: true };
+  } catch (error: any) {
+    console.error("Error fetching data dari Apps Script:", error);
     console.log("Jatuh kembali ke data lokal");
-    return mapIcons(FALLBACK_DATA);
+    return { ...mapIcons(FALLBACK_DATA), isLive: false, error: error.message };
   }
 }
 

@@ -199,11 +199,20 @@ export default function App() {
           <div className="bg-slate-900 rounded-2xl p-4 text-white relative overflow-hidden">
             <div className="relative z-10">
               <p className="text-xs text-slate-400 mb-1">Status Sistem</p>
-              <p className="text-sm font-medium">Database Terhubung</p>
+              <p className="text-sm font-medium">
+                {dashboardData?.isLive ? 'Database Terhubung' : 'Mode Offline (Lokal)'}
+              </p>
               <div className="mt-3 flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                <span className="text-[10px] uppercase tracking-widest font-bold text-emerald-400">Live Sync</span>
+                <div className={cn("w-2 h-2 rounded-full animate-pulse", dashboardData?.isLive ? "bg-emerald-400" : "bg-amber-400")} />
+                <span className={cn("text-[10px] uppercase tracking-widest font-bold", dashboardData?.isLive ? "text-emerald-400" : "text-amber-400")}>
+                  {dashboardData?.isLive ? 'Live Sync' : 'Fallback Data'}
+                </span>
               </div>
+              {!dashboardData?.isLive && dashboardData?.error && (
+                <p className="text-[9px] text-slate-500 mt-2 truncate" title={dashboardData.error}>
+                  Error: {dashboardData.error}
+                </p>
+              )}
             </div>
             <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl" />
           </div>
